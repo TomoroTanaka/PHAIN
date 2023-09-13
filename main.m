@@ -1,11 +1,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
-%                      INPAINTING METHODS COMPARISON                      %
+%                   PHASE-AWARE AUDIO INPAINTING (PHAIN)                  %
 %                                                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% 09-Oct-2021~ revised for thesis
-% 10-Feb-2022~ revised for journal
  
 close all
 clear
@@ -13,19 +10,10 @@ clc
 
 rng(0)
 
-% global conj_atoms;
-% conj_atoms = true;
-
 %% paths
 
-addpath('reweighted l1 relaxation');
-addpath('SPAIN');
-addpath('Janssen');
-addpath('OMP');
-addpath('ltfat');
-addpath('Toolbox');
-addpath('PemoQ_1.4.0_free');
-addpath('Phain');
+addpath(genpath('phase_correction'));
+addpath('PHAIN');
 addpath('Results');
 addpath('Nonconvex');
 addpath('basisopt');
