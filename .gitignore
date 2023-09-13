@@ -32,7 +32,5 @@ codegen/
 # Cloud based storage dotfile
 .MATLABDriveTag
 
-.gitattributes
-.git
-resources
+resources/**
 PHAIN.prj
