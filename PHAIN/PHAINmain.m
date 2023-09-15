@@ -1,6 +1,6 @@
-function [ outsig, snr_procedure ] = propMain( insig, mask, param, paramsolver, oracle)
-%
-% insig ........... input (degraded) signal
+function [outsig, snr_procedure] = PHAINmain(insig, mask, param, paramsolver, oracle)
+
+% insig ........... input gapped signal
 % mask ............ logical vector indicating the missing samples
 
 % param
@@ -9,6 +9,7 @@ function [ outsig, snr_procedure ] = propMain( insig, mask, param, paramsolver, 
 %   .w
 %   .offset
 %   .type 
+
 % paramsolver
 %   .sigma .... parameter of prox_f*
 %   .tau ...... parameter of prox_g
@@ -24,18 +25,15 @@ function [ outsig, snr_procedure ] = propMain( insig, mask, param, paramsolver, 
 % Date: 09/10/2021
 
 %% input signal shortening
+
 a = param.a;
 M = param.M;
 w = param.w;
 
-[win,~] = generalizedCosWin(w,'hanning');
-tight_win = calcCanonicalTightWindow(win,a);
-tight_win = tight_win/norm(tight_win)*sqrt(a/w);
-
 N = length(insig);
 s = find(~mask,1,'first');
 f = find(~mask,1,'last');
-[q,~,~,~,~,~,~,~,~,~,L] = min_sig_supp_2(w,a,M,s,f,N,1,offset(s,f,a,param.offset));
+[q, L] = shortenForDGT(w, a, s, f, offset(s, f, a, param.offset));
 if L < dgtlength(L,a,M)
     L = dgtlength(L,a,M);
 end
@@ -50,11 +48,16 @@ else
     mask = [ mask(q:end); true(L-(N-q+1),1) ];
     oracle = [ oracle(q:end); padding ];
 end
+
+%% 
+
+[win, ~] = generalizedCosWin(w, 'hanning');
+tight_win = calcCanonicalTightWindow(win, a);
+tight_win = tight_win/norm(tight_win)*sqrt(a/w);
+diff_win = numericalDiffWin(tight_win);
     
 zeroPhaseFlag = true;
 rotateFlag = true;
-
-diff_win = numericalDiffWin(tight_win);
 
 [sigIdx,sumIdx,sumArray,ifftArray,rotIdx] = precomputationForFDGT(length(signal),w,a,M);
 ana = @(signal) FDGT(signal,tight_win,sigIdx,M,rotIdx,zeroPhaseFlag);
