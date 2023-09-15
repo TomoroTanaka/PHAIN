@@ -4,7 +4,7 @@
 %                                                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
-close all
+% close all
 clear
 clc
 
@@ -56,6 +56,8 @@ winLen = 2800;
 shiftLen = winLen/4;
 FFTnum = winLen;
 
+off = 'half';
+
 % parameter setting for PHAINs
 param.a = shiftLen;
 param.M = FFTnum;
@@ -68,9 +70,6 @@ paramsolver.tol = 5e-4;
 paramsolver.tau = 0.25;
 paramsolver.sigma = 1;
 paramsolver.alpha = 1;
-
-off = 'half';
-
 
 %% inpainting
 
@@ -121,17 +120,16 @@ for nn = 1:NN
                 L = enoughL;
             end
             Q = q + L - 1;
-            if Q <= segment.length
+            if Q <= segment.length && q >= 1
                 ssegment.mask = segment.mask(q:Q);
                 ssegment.gapped = segment.gapped(q:Q);
                 ssegment.data = segment.data(q:Q);
             else
-                ssegment.mask = segment.mask(q:end);
-                ssegment.gapped = segment.gapped(q:end);
-                ssegment.data = segment.data(q:end);
-                ssegment.mask(end+1:L) = true;
-                ssegment.gapped(end+1:L) = 0;
-                ssegment.data(end+1:L) = 0;
+                q = max(q, 1);
+                padding = zeros(Q - N, 1);
+                ssegment.mask = [segment.mask(q:end); padding];
+                ssegment.gapped = [segment.gapped(q:end); padding];
+                ssegment.data = [segment.data(q:end); padding];
             end
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%% B-PHAIN %%%%%%%%%%%%%%%%%%%%%%%%%%%

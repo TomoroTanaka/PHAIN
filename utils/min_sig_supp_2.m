@@ -103,4 +103,4 @@ U = (p-q)/a+1;
 V = U + (F-S);
 
 % final length used
-L=Q-q+1;v
+L=Q-q+1;
