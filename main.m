@@ -78,7 +78,7 @@ for nn = 1:NN
     for m = 1:M
 
         fprintf('\nSignal: %d / %d', nn, NN)
-        fprintf('\nGap Length: %d [ms]\n\n', gaps(m))
+        fprintf('\nGap Length: %d [ms]\n', gaps(m))
 
         gapLength = gaps(m); % [ms]
         h = round(Fs*gapLength/1000); % [samples]
@@ -101,6 +101,7 @@ for nn = 1:NN
             f = s + h - 1;
             segment.mask = true(segment.length, 1);
             segment.mask(s:f) = false;
+            full.mask(idx) = segment.mask;
 
             segment.data = signal(idx);
             segment.max = max(abs(segment.data));
@@ -118,14 +119,19 @@ for nn = 1:NN
                 segment.mask = segment.mask(firstIdx:lastIdx);
                 segment.gapped = segment.gapped(firstIdx:lastIdx);
                 segment.data = segment.data(firstIdx:lastIdx);
+                idx = idx(firstIdx:firstIdx + L - 1);
+                st = 1;
+                ed = L;
             else
                 firstIdx = max(firstIdx, 1);
                 padding = zeros(lastIdx - length(segment.data), 1);
-                segment.mask = [segment.mask(firstIdx:end); padding];
+                segment.mask = [segment.mask(firstIdx:end); true(size(padding))];
                 segment.gapped = [segment.gapped(firstIdx:end); padding];
                 segment.data = [segment.data(firstIdx:end); padding];
+                idx = idx(firstIdx:firstIdx + length(segment.data) - length(padding) - 1);
+                st = 1;
+                ed = L - length(padding);
             end
-            idx = idx(firstIdx:firstIdx + L - 1);
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%% B-PHAIN %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -137,7 +143,7 @@ for nn = 1:NN
             [segment.solution, SNR_procedure{nn, m, n, 1}] = ...
                 PHAINmain(segment.gapped, segment.mask, param, paramsolver, segment.data);
 
-            solution.B_PHAIN{nn, m}(idx) = segment.solution*segment.max;
+            solution.B_PHAIN{nn, m}(idx) = segment.solution(st:ed)*segment.max;
             TIME(nn, m, n, 1) = toc;
 
 
@@ -151,7 +157,7 @@ for nn = 1:NN
             [segment.solution, SNR_procedure{nn, m, n, 2}] = ...
                 PHAINmain(segment.gapped, segment.mask, param, paramsolver, segment.data);
 
-            solution.B_PHAIN_ora{nn, m}(idx) = segment.solution*segment.max;
+            solution.B_PHAIN_ora{nn, m}(idx) = segment.solution(st:ed)*segment.max;
             TIME(nn, m, n, 2) = toc;
 
 
@@ -166,7 +172,7 @@ for nn = 1:NN
             [segment.solution, SNR_procedure{nn, m, n, 3}] = ...
                 PHAINmain(segment.gapped, segment.mask, param, paramsolver, segment.data);
 
-            solution.R_PHAIN{nn, m}(idx) = segment.solution*segment.max;
+            solution.R_PHAIN{nn, m}(idx) = segment.solution(st:ed)*segment.max;
             TIME(nn, m, n, 3) = toc;
 
 
@@ -181,7 +187,7 @@ for nn = 1:NN
             [segment.solution, SNR_procedure{nn, m, n, 4}] = ...
                 PHAINmain(segment.gapped, segment.mask, param, paramsolver, segment.data);
 
-            solution.R_PHAIN_ora{nn, m}(idx) = segment.solution*segment.max;
+            solution.R_PHAIN_ora{nn, m}(idx) = segment.solution(st:ed)*segment.max;
             TIME(nn, m, n, 4) = toc;
 
 
@@ -196,7 +202,7 @@ for nn = 1:NN
             [segment.solution, SNR_procedure{nn, m, n, 5}] = ...
                 PHAINmain(segment.gapped, segment.mask, param, paramsolver, segment.data);
 
-            solution.UR_PHAIN{nn, m}(idx) = segment.solution*segment.max;
+            solution.UR_PHAIN{nn, m}(idx) = segment.solution(st:ed)*segment.max;
             TIME(nn, m, n, 5) = toc;
 
 
@@ -211,28 +217,25 @@ for nn = 1:NN
             [segment.solution, SNR_procedure{nn, m, n, 6}] = ...
                 PHAINmain(segment.gapped, segment.mask, param, paramsolver, segment.data);
 
-            solution.U_PHAIN{nn, m}(idx) = segment.solution*segment.max;
+            solution.U_PHAIN{nn, m}(idx) = segment.solution(st:ed)*segment.max;
             TIME(nn, m, n, 6) = toc;
-
 
         end
 
+        fprintf('\nevaluation start\n')
+        for i = 1:length(methodLabels)
+            restored = solution.(methodLabels{i}){nn, m};
+            groundtruth = signal(~full.mask);
+            result = restored(~full.mask);
+            for n = 1:N
+                SNR(nn, m, n, i) = snr_n(groundtruth(1 + h*(n - 1):h*n), result(1 + h*(n - 1):h*n));
+            end
+        end
+        fprintf('\nevaluation done!\n')
+
     end
 
 end
-
-%% evaluation
-
-fprintf('\nevaluation start\n')
-for i = 1:length(methodLabels)
-    restored = solution.(methodLabels{i}){nn, m};
-    groundtruth = signal(~full.mask);
-    result = restored(~full.mask);
-    for n = 1:N
-        SNR(nn, m, n, i) = snr_n(groundtruth(1 + h*(n - 1):h*n), result(1 + h*(n - 1):h*n));
-    end
-end
-fprintf('\nevaluation done!\n')
 
 %% plot
 
