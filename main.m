@@ -20,13 +20,14 @@ addpath('results');
 
 %% settings
 
-Sounds = dir('dataset/EBU_SQAM/*.wav');
+% Sounds = dir('dataset/EBU_SQAM/*.wav');
+Sounds = dir('dataset/examples/*.flac');
 NN = length(Sounds);
 data = cell(NN,1);
 info = audioinfo(Sounds(1).name);
 Fs = info.SampleRate;
 for nn = 1:NN
-    data{nn} = audioread(Sounds(nn).name);
+    data{nn} = resample(audioread(Sounds(nn).name), 44100, 16000);
 end
 clear audio info
      
@@ -242,5 +243,5 @@ end
 snr_vec = squeeze(median(SNR, [1,3]));
 figure()
 plot(snr_vec)
-legend(methodLabels, 'interpreter', 'latex')
-xlabel('gap length 5:5:100 [ms]')
+legend({'B-PHAIN', 'B-PHAIN (ora.)', 'R-PHAIN', 'R-PHAIN (ora.)', 'UR-PHAIN', 'U-PHAIN'}, Interpreter = "latex")
+xlabel('gap length 5:5:100 [ms]', Interpreter = 'latex')
