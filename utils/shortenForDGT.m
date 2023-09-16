@@ -1,4 +1,8 @@
-function [firstIdx, L] = shortenForDGT(w, a, s, f, offset)
+function [firstIdx, L] = shortenForDGT(w, a, s, f)
+
+    center = ceil((s+f)/2);
+    diff = 1 + floor((center - 1)/a)*a + ceil(a/2);
+    offset = center - diff;
 
     firstWin = ceil((s - ceil(w/2))/a) + 1;
     firstWinPos = 1 + (firstWin - 1)*a;

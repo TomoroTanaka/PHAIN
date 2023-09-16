@@ -1,55 +1,29 @@
 function [outsig, snr_procedure] = PHAINmain(insig, mask, param, paramsolver, oracle)
 
-% insig ........... input gapped signal
-% mask ............ logical vector indicating the missing samples
-
 % param
 %   .a
 %   .M
 %   .w
-%   .offset
 %   .type 
 
+
 % paramsolver
-%   .sigma .... parameter of prox_f*
-%   .tau ...... parameter of prox_g
-%   .alpha .... step size
+%   .sigma .... step size
+%   .tau ...... step size
+%   .alpha .... relaxation paramter
 %   .lambda ... threshold
-%   .delta .... stop criterion
-%   .epsilon .. stop criterion 2
-%   .x0 ....... starting point of primal variable
-%   .y0 ....... starting point of dual variable
-%   .maxit .... maximal number of iterations
-%   .tol ...... tolerance of the relative norm of x between two iterations
+%   .epsilon .. stop criterion
+%   .x0 ....... initial value of primal variable
+%   .u0 ....... initial value of dual variable
+%   .I ........ number of inner iterations
+%   .J ........ number of outer iterations
 
-% Date: 09/10/2021
 
-%% input signal shortening
+%% iPC DGT
 
 a = param.a;
 M = param.M;
 w = param.w;
-
-N = length(insig);
-s = find(~mask,1,'first');
-f = find(~mask,1,'last');
-[q, L] = shortenForDGT(w, a, s, f, offset(s, f, a, param.offset));
-if L < dgtlength(L,a,M)
-    L = dgtlength(L,a,M);
-end
-if q+L-1 <= N && q >= 1
-    signal = insig(q:q+L-1);
-    mask = mask(q:q+L-1);
-    oracle = oracle(q:q+L-1);
-else
-    q = max(q,1);
-    padding = zeros(L-(N-q+1),1);
-    signal = [ insig(q:end); padding ];
-    mask = [ mask(q:end); true(L-(N-q+1),1) ];
-    oracle = [ oracle(q:end); padding ];
-end
-
-%% 
 
 [win, ~] = generalizedCosWin(w, 'hanning');
 tight_win = calcCanonicalTightWindow(win, a);
@@ -59,246 +33,209 @@ diff_win = numericalDiffWin(tight_win);
 zeroPhaseFlag = true;
 rotateFlag = true;
 
-[sigIdx,sumIdx,sumArray,ifftArray,rotIdx] = precomputationForFDGT(length(signal),w,a,M);
-ana = @(signal) FDGT(signal,tight_win,sigIdx,M,rotIdx,zeroPhaseFlag);
-syn = @(spec) invFDGT(spec,tight_win,sumIdx,sumArray,ifftArray,rotIdx,zeroPhaseFlag)*w;
-dana = @(signal) FDGT(signal,diff_win,sigIdx,M,rotIdx,zeroPhaseFlag);
-IF= @(signal) calcInstFreq(ana(signal),dana(signal),M,w,rotateFlag);
-pcana = @(spec,ifcum) instPhaseCorrection(spec,ifcum,a,M);
-pcsyn = @(iPCspec,ifcum) invInstPhaseCorrection(iPCspec,ifcum,a,M);
+[sigIdx, sumIdx, sumArray, ifftArray, rotIdx] = precomputationForFDGT(length(insig), w, a, M);
 
-T = @(x) [x(:,1:end-1) - x(:,2:end)];
-T_ = @(y) [y(:,1) (y(:,2:end)-y(:,1:end-1)) -y(:,end)];
+G = @(x) FDGT(x, tight_win, sigIdx, M, rotIdx, zeroPhaseFlag);
+G_adj = @(u) invFDGT(u, tight_win, sumIdx, sumArray, ifftArray, rotIdx, zeroPhaseFlag)*w;
+G_diff = @(x) FDGT(x, diff_win, sigIdx, M, rotIdx, zeroPhaseFlag);
 
-J = @(x,ifcum) T(pcana(ana(x),ifcum));
-J_ = @(spec,ifcum) syn(pcsyn(T_(spec),ifcum));
-    
-%% weighting
+omega = @(x) calcInstFreq(G(x), G_diff(x), M, w, rotateFlag);
 
-wts = 1;
+R = @(z, omega) instPhaseCorrection(z, omega, a, M);
+R_adj = @(z, omega) invInstPhaseCorrection(z, omega, a, M);
 
-%% reconstruction
+D = @(z) z(:,1:end-1) - z(:,2:end);
+D_adj = @(z) [z(:,1), (z(:,2:end) - z(:,1:end-1)), -z(:,end)];
 
-soft = @(x,gamma) sign(x) .* max(abs(x)-gamma, 0);
+hatG = @(x, omega) D(R(G(x), omega));
+hatG_adj = @(u, omega) G_adj(R_adj(D_adj(u), omega));
 
-if strcmp(param.type,'P')
-    
-    rwts = 1;
-    param.prox_g = @(x) proj_time(x,mask,signal.*mask);
-    param.dim = L;
-    inst_freq = IF(signal);
+
+%%
+
+soft = @(z, lambda) sign(z).*max(abs(z) - lambda, 0);
+param.proj = @(x) proj_Gamma(x, mask, insig.*mask);
+
+if strcmp(param.type,'B')
+
     sigma = paramsolver.sigma;
     lambda = paramsolver.lambda;
-    paramsolver.x0 = signal;
+    param.prox = @(z) soft(z, lambda/sigma);
 
-    param.prox_f = @(x) soft(x,rwts.*wts*lambda/sigma);
-    param.K = @(sig) J(sig,inst_freq);
-    param.K_adj = @(spec) J_(spec,inst_freq);
-    [y_hat, snr_procedure] = PDS(param,paramsolver, oracle, mask);
+    omega_y = omega(insig);
+    param.L = @(x) hatG(x, omega_y);
+    param.L_adj = @(u) hatG_adj(u, omega_y);
 
-    % solution
-    restored = real(y_hat(1:L));
+    paramsolver.x0 = insig;
+    paramsolver.u0 = zeros(size(param.L(zeros(length(insig), 1))));
 
-elseif strcmp(param.type,'Po')
+    [outsig, snr_procedure] = CP(param, paramsolver, oracle, mask);
 
-    rwts = 1;
-    param.prox_g = @(x) proj_time(x,mask,signal.*mask);
-    param.dim = L;
-    inst_freq = IF(oracle);
+
+elseif strcmp(param.type,'Bora')
+
     sigma = paramsolver.sigma;
     lambda = paramsolver.lambda;
-    paramsolver.x0 = signal;
-    
-    param.prox_f = @(x) soft(x,rwts.*wts*lambda/sigma);
-    param.K = @(sig) J(sig,inst_freq);
-    param.K_adj = @(spec) J_(spec,inst_freq);
-    [y_hat, snr_procedure] = PDS(param,paramsolver, oracle, mask);
-    
-    % solution
-    restored = real(y_hat(1:L));
+    param.prox = @(z) soft(z, lambda/sigma);
 
-elseif strcmp(param.type,'RP')
-    
-    rwts = 1;
-    param.prox_g = @(x) proj_time(x,mask,signal.*mask);
-    param.dim = L;
-    inst_freq = IF(signal);
+    omega_y_tilde = omega(oracle);
+    param.L = @(x) hatG(x, omega_y_tilde);
+    param.L_adj = @(u) hatG_adj(u, omega_y_tilde);
+
+    paramsolver.x0 = insig;
+    paramsolver.u0 = zeros(size(param.L(zeros(length(insig), 1))));
+
+    [outsig, snr_procedure] = CP(param, paramsolver, oracle, mask);
+
+
+elseif strcmp(param.type,'R')
+
+    wts = 1;
     sigma = paramsolver.sigma;
     lambda = paramsolver.lambda;
-    y_hat = zeros(param.dim,1); % initial solution
-    paramsolver.x0 = signal;
 
-    snr_procedure = NaN(paramsolver.iter, paramsolver.maxit);
+    omega_y = omega(insig);
+    param.L = @(x) hatG(x, omega_y);
+    param.L_adj = @(u) hatG_adj(u, omega_y);
 
-    % the outer cycle
-    for iteration = 1:paramsolver.maxit
-        y_old = y_hat;
-        param.prox_f = @(x) soft(x,rwts.*wts*lambda/sigma);
-        param.K = @(sig) J(sig,inst_freq);
-        param.K_adj = @(spec) J_(spec,inst_freq);
-        [y_hat, snr_procedure(:,iteration)] = PDS(param,paramsolver, oracle, mask);
-        if norm(y_old - y_hat) < paramsolver.delta
-            break;
+    paramsolver.x0 = insig;
+    paramsolver.u0 = zeros(size(param.L(zeros(length(insig), 1))));
+    x_old = insig;
+
+    snr_procedure = NaN(paramsolver.I, paramsolver.J);
+
+    for j = 1:paramsolver.J
+
+        param.prox = @(z) soft(z, wts.*lambda/sigma);
+
+        [x_hat, snr_procedure(:, j)] = CP(param, paramsolver, oracle, mask);
+        
+        if norm(x_old - x_hat) < paramsolver.epsilon
+            break
         end
-%         rwts = 1./(abs(param.K(y_hat)) + paramsolver.epsilon);
-%         rwts = abs(param.K(y_hat));
-        denom = movmean(abs(ana(y_hat)),[0,1],2);
-%         denom = denom./vecnorm(denom,2);
-        rwts = 1./(denom + paramsolver.epsilon);
-%         rwts = rwts./max(rwts,[],1);
-        rwts = rwts(:,1:end-1);
+
+        denom = movmean(abs(G(x_hat)),[0,1],2);
+        wts = 1./(denom + 1e-3);
+        wts = wts(:, 1:end-1);
+
+        x_old = x_hat;
+
     end
 
-    % solution
-    restored = real(y_hat(1:L));
+    outsig = x_hat;
 
-elseif strcmp(param.type,'RPo')
+
+elseif strcmp(param.type,'Rora')
     
-    rwts = 1;
-    param.prox_g = @(x) proj_time(x,mask,signal.*mask);
-    param.dim = L;
-    inst_freq = IF(oracle);
+    wts = 1;
     sigma = paramsolver.sigma;
     lambda = paramsolver.lambda;
-    y_hat = zeros(param.dim,1); % initial solution
-    paramsolver.x0 = signal;
 
-    snr_procedure = NaN(paramsolver.iter, paramsolver.maxit);
+    omega_y_tilde = omega(oracle);
+    param.L = @(x) hatG(x, omega_y_tilde);
+    param.L_adj = @(u) hatG_adj(u, omega_y_tilde);
 
-    % the outer cycle
-    for iteration = 1:paramsolver.maxit
-        y_old = y_hat;
-        param.prox_f = @(x) soft(x,rwts.*wts*lambda/sigma);
-        param.K = @(sig) J(sig,inst_freq);
-        param.K_adj = @(spec) J_(spec,inst_freq);
-        [y_hat, snr_procedure(:,iteration)] = PDS(param,paramsolver, oracle, mask);
-        if norm(y_old - y_hat) < paramsolver.delta
-            break;
+    paramsolver.x0 = insig;
+    paramsolver.u0 = zeros(size(param.L(zeros(length(insig), 1))));
+    x_old = insig;
+
+    snr_procedure = NaN(paramsolver.I, paramsolver.J);
+
+    for j = 1:paramsolver.J
+
+        param.prox = @(z) soft(z, wts.*lambda/sigma);
+
+        [x_hat, snr_procedure(:, j)] = CP(param, paramsolver, oracle, mask);
+        
+        if norm(x_old - x_hat) < paramsolver.epsilon
+            break
         end
-%         rwts = 1./(abs(param.K(y_hat)) + paramsolver.epsilon);  
-%         rwts = abs(param.K(y_hat));
-        denom = movmean(abs(ana(y_hat)),[0,1],2);
-%         denom = denom./vecnorm(denom,2);
-        rwts = 1./(denom + paramsolver.epsilon);
-%         rwts = rwts./max(rwts,[],1);
-        rwts = rwts(:,1:end-1);
+
+        denom = movmean(abs(G(x_hat)),[0,1],2);
+        wts = 1./(denom + 1e-3);
+        wts = wts(:, 1:end-1);
+
+        x_old = x_hat;
+
     end
 
-    % solution
-    restored = real(y_hat(1:L));
+    outsig = x_hat;
 
-elseif strcmp(param.type,'UP')
-    
-    rwts = 1;
-    param.prox_g = @(x) proj_time(x,mask,signal.*mask);
-    param.dim = L;
-    inst_freq = IF(signal);
+
+elseif strcmp(param.type,'UR')
+
+    wts = 1;
     sigma = paramsolver.sigma;
     lambda = paramsolver.lambda;
-    y_hat = zeros(param.dim,1); % initial solution
-    paramsolver.x0 = signal;
 
-    snr_procedure = NaN(paramsolver.iter, paramsolver.maxit);
+    omega_y = omega(insig);
+    param.L = @(x) hatG(x, omega_y);
+    param.L_adj = @(u) hatG_adj(u, omega_y);
 
-    % the outer cycle
-    for iteration = 1:paramsolver.maxit
-        y_old = y_hat;
-        param.prox_f = @(x) soft(x,rwts.*wts*lambda/sigma);
-        param.K = @(sig) J(sig,inst_freq);
-        param.K_adj = @(spec) J_(spec,inst_freq);
-        [y_hat, snr_procedure(:,iteration)] = PDS(param,paramsolver, oracle, mask);
-        if norm(y_old - y_hat) < paramsolver.delta
-            break;
+    paramsolver.x0 = insig;
+    paramsolver.u0 = zeros(size(param.L(zeros(length(insig), 1))));
+    x_old = insig;
+
+    snr_procedure = NaN(paramsolver.I, paramsolver.J);
+
+    for j = 1:paramsolver.J
+
+        param.prox = @(z) soft(z, wts.*lambda/sigma);
+
+        [x_hat, snr_procedure(:, j)] = CP(param, paramsolver, oracle, mask);
+        
+        if norm(x_old - x_hat) < paramsolver.epsilon
+            break
         end
-        inst_freq = IF(y_hat);
+
+        denom = movmean(abs(G(x_hat)),[0,1],2);
+        wts = 1./(denom + 1e-3);
+        wts = wts(:, 1:end-1);
+
+        omega_x_hat = omega(x_hat);
+        param.L = @(x) hatG(x, omega_x_hat);
+        param.L_adj = @(u) hatG_adj(u, omega_x_hat);
+
+        x_old = x_hat;
+
     end
 
-    % solution
-    restored = real(y_hat(1:L));
+    outsig = x_hat;
 
-elseif strcmp(param.type,'URP')
-    
-    rwts = 1;
-    param.prox_g = @(x) proj_time(x,mask,signal.*mask);
-    param.dim = L;
-    inst_freq = IF(signal);
+
+elseif strcmp(param.type,'U')
+
     sigma = paramsolver.sigma;
     lambda = paramsolver.lambda;
-    y_hat = zeros(param.dim,1); % initial solution
-    paramsolver.x0 = signal;
+    param.prox = @(z) soft(z, lambda/sigma);
 
-    snr_procedure = NaN(paramsolver.iter,paramsolver.maxit);
+    omega_y = omega(insig);
+    param.L = @(x) hatG(x, omega_y);
+    param.L_adj = @(u) hatG_adj(u, omega_y);
 
-    % the outer cycle
-    for iteration = 1:paramsolver.maxit
-        y_old = y_hat;
-        param.prox_f = @(x) soft(x,rwts.*wts*lambda/sigma);
-        param.K = @(sig) J(sig,inst_freq);
-        param.K_adj = @(spec) J_(spec,inst_freq);
-        [y_hat, snr_procedure(:,iteration)] = PDS(param,paramsolver, oracle, mask);
-        if norm(y_old - y_hat) < paramsolver.delta
-            break;
+    paramsolver.x0 = insig;
+    paramsolver.u0 = zeros(size(param.L(zeros(length(insig), 1))));
+    x_old = insig;
+
+    snr_procedure = NaN(paramsolver.I, paramsolver.J);
+
+    for j = 1:paramsolver.J
+
+        [x_hat, snr_procedure(:, j)] = CP(param, paramsolver, oracle, mask);
+        
+        if norm(x_old - x_hat) < paramsolver.epsilon
+            break
         end
-%         rwts = 1./(abs(param.K(y_hat)) + paramsolver.epsilon); 
-%         rwts = abs(param.K(y_hat));
-        denom = movmean(abs(ana(y_hat)),[0,1],2);
-%         denom = denom./vecnorm(denom,2);
-        rwts = 1./(denom + paramsolver.epsilon);
-%         rwts = rwts./max(rwts,[],1);
-        rwts = rwts(:,1:end-1);
-        inst_freq = IF(y_hat);
-        param.K = @(sig) J(sig,inst_freq); 
+
+        omega_x_hat = omega(x_hat);
+        param.L = @(x) hatG(x, omega_x_hat);
+        param.L_adj = @(u) hatG_adj(u, omega_x_hat);
+
+        x_old = x_hat;
+
     end
 
-    % solution
-    restored = real(y_hat(1:L));
+    outsig = x_hat;
 
-elseif strcmp(param.type,'UPL2')
-    
-    param.prox_g = @(x) proj_time(x,mask,signal.*mask);
-    param.dim = L;
-    inst_freq = IF(signal);
-    y_hat = zeros(param.dim,1); % initial solution
-    paramsolver.x0 = signal;
-
-    snr_procedure = NaN(paramsolver.iter, paramsolver.maxit);
-
-    % the outer cycle
-    for iteration = 1:paramsolver.maxit
-        y_old = y_hat;
-        param.K = @(sig) J(sig,inst_freq);
-        param.K_adj = @(spec) J_(spec,inst_freq);
-        [y_hat, snr_procedure(:,iteration)] = ProximalGradient(param, paramsolver, oracle, mask);
-        if norm(y_old - y_hat) < paramsolver.delta
-            break;
-        end
-        inst_freq = IF(y_hat);
-        param.K = @(sig) J(sig,inst_freq);
-    end
-
-    % solution
-    restored = real(y_hat(1:L));
-
-elseif strcmp(param.type,'PCTV')
-    
-    rwts = 1;
-    param.prox_g = @(x) proj_time(x,mask,signal.*mask);
-    param.dim = L;
-    sigma = paramsolver.sigma;
-    lambda = paramsolver.lambda;
-    paramsolver.x0 = signal;
-
-    param.prox_f = @(x) soft(x, rwts.*wts*lambda/sigma);
-    param.K = @(sig) T(ana(sig));
-    param.K_adj = @(spec) syn(T_(spec));
-    [y_hat, snr_procedure] = PDS(param,paramsolver, oracle, mask);
-
-    % solution
-    restored = real(y_hat(1:L));
     
 end
-
-%% putting the restored signal together
-outsig = insig;
-outsig(q:q+L-1) = restored;
-outsig = outsig(1:N);
