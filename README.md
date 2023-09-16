@@ -1,5 +1,5 @@
 # PHAIN (PHase-aware Audio INpainter)
-** Tomoro Tanaka (Department of Intermedia Art and Science, Waseda University, Tokyo, Japan)**\
+**Tomoro Tanaka (Department of Intermedia Art and Science, Waseda University, Tokyo, Japan)**\
 
 This README file describes the MATLAB codes provided to test, analyze, and evaluate our proposed method, PHAINs.\
 PHAIN is an audio declipping method introduced in the following paper
@@ -13,7 +13,7 @@ Some functions rely on
 
 2. Toolbox available online: This is available online under the [MIT license](https://opensource.org/licenses/mit-license.php).
 
-- Instantaneous phase correction of complex spectrogram
+- Instantaneous phase correction of complex spectrogram\
   *This folder contains a set of MATLAB codes written as a supplementary material of the following tutorial paper explaining phase-related property of spectrograms:
   I already installed it so you can easily execute the codes. Plaese refer to https://doi.org/10/c3qb.
 
