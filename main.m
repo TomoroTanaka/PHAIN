@@ -18,33 +18,31 @@ addpath(genpath('phase_correction'));
 addpath('PHAIN');
 addpath('results');
 
-%% settings
+%% loading
 
-% Sounds = dir('dataset/EBU_SQAM/*.wav');
-Sounds = dir('dataset/examples/*.flac');
+soundDir = "dataset/foo/";
+ext = ".wav";
+Sounds = dir(soundDir + "*" + ext);
 NN = length(Sounds);
 data = cell(NN,1);
 info = audioinfo(Sounds(1).name);
 Fs = info.SampleRate;
 for nn = 1:NN
-    data{nn} = resample(audioread(Sounds(nn).name), 44100, 16000);
+    data{nn} = audioread(Sounds(nn).name);
 end
 clear audio info
+
+%% settings
      
 gaps = 5:5:50; % [ms]
 M = length(gaps);
 
 N = 8; % # of gaps
 
-sig_counter = 0;
-
 methodLabels = {'B_PHAIN', 'B_PHAIN_ora', 'R_PHAIN', 'R_PHAIN_ora', 'UR_PHAIN', 'U_PHAIN'};
 
-inner = 100;
-outer = 10;
-
 for i = 1:length(methodLabels)
-    solution.(methodLabels{i}) = cell(NN, M);
+    solution.(methodLabels{i}) = cell(NN, M);  % initialization of restored results
 end
 
 SNR  = NaN(NN, M, N, length(methodLabels));  % SNR per gap
@@ -62,13 +60,13 @@ param.a = shiftLen;
 param.M = FFTnum;
 param.w = winLen;
 
-paramsolver.epsilon = 0.01;
+paramsolver.epsilon = 0.01;  % for stopping criterion
 
-paramsolver.tau = 0.25;
-paramsolver.sigma = 1;
-paramsolver.alpha = 1;
+paramsolver.tau = 0.25;  % step size
+paramsolver.sigma = 1;  % step size
+paramsolver.alpha = 1;  % relaxation parameter
 
-paramsolver.lambda = 1;
+paramsolver.lambda = 1;  % threshold (regularization parameter)
 
 %% inpainting
 
@@ -98,6 +96,7 @@ for nn = 1:NN
             fprintf('\nGap Number: %d / %d\n', n, N)
             idx = round(notDegraded*Fs) + ((n - 1)*segment.length+1:n*segment.length);
 
+            % making a gap      
             s = round((winLen + 1) + rand()*(segment.length - 2*winLen - h));
             f = s + h - 1;
             segment.mask = true(segment.length, 1);
@@ -108,7 +107,8 @@ for nn = 1:NN
             segment.max = max(abs(segment.data));
             segment.data = segment.data/segment.max;
             segment.gapped = segment.data.*segment.mask;
-       
+            
+            % shortening the segment
             [firstIdx, L] = shortenForDGT(winLen, shiftLen, s, f);
             origL = L;
             enoughL = ceil(L/lcm(shiftLen, FFTnum))*lcm(shiftLen, FFTnum);
@@ -223,6 +223,7 @@ for nn = 1:NN
 
         end
 
+        % calculating SNR
         fprintf('\nevaluation start\n')
         for i = 1:length(methodLabels)
             restored = solution.(methodLabels{i}){nn, m};

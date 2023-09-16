@@ -35,18 +35,23 @@ rotateFlag = true;
 
 [sigIdx, sumIdx, sumArray, ifftArray, rotIdx] = precomputationForFDGT(length(insig), w, a, M);
 
+% DGTs (original, its adjoint, and one with the differentiated window)
 G = @(x) FDGT(x, tight_win, sigIdx, M, rotIdx, zeroPhaseFlag);
 G_adj = @(u) invFDGT(u, tight_win, sumIdx, sumArray, ifftArray, rotIdx, zeroPhaseFlag)*w;
 G_diff = @(x) FDGT(x, diff_win, sigIdx, M, rotIdx, zeroPhaseFlag);
 
+% function to calculate the instantaneous frequency of the input signal
 omega = @(x) calcInstFreq(G(x), G_diff(x), M, w, rotateFlag);
 
+% operator to correct phase rotation and its adjoint
 R = @(z, omega) instPhaseCorrection(z, omega, a, M);
 R_adj = @(z, omega) invInstPhaseCorrection(z, omega, a, M);
 
+% time-directional difference
 D = @(z) z(:,1:end-1) - z(:,2:end);
 D_adj = @(z) [z(:,1), (z(:,2:end) - z(:,1:end-1)), -z(:,end)];
 
+% iPC-DGT
 hatG = @(x, omega) D(R(G(x), omega));
 hatG_adj = @(u, omega) G_adj(R_adj(D_adj(u), omega));
 
