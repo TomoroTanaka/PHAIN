@@ -28,7 +28,7 @@ Execute `main.m` and run PHAINs (the parameters and data directory can be modifi
   - `PHAINmain.m`.
   - `CP.m` is the Chambolle-Pock algorithm.
 
--`dataset` is the folder to contain test data, where any files can be downloaded.
+- `dataset` is the folder to contain test data, where any files can be downloaded.
 
 - `utils`
   - `proj_Gamma.m`.
