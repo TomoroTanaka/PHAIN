@@ -19,22 +19,24 @@ Some functions rely on
 
   >[2] Kohei Yatabe, Yoshiki Masuyama, Tsubasa Kusano and Yasuhiro Oikawa, "Representation of complex spectrogram via phase conversion," Acoustical Science and Technology, vol.40, no.3, May 2019. (Open Access)
 
-## Data
-There is a folder to contain test data. You can download and save any files there.\
-
-
 ## Usage
-Execute `main.m` to perform PHAINs.
+Execute `main.m` and run PHAINs (the parameters and data directory can be modified by yourself).
+
+## Directory Structure
 
 - `PHAIN`
   - `PHAINmain.m`.
-  - `CP.m` is the Chambolle--Pock algorithm.
+  - `CP.m` is the Chambolle-Pock algorithm.
+
+-`dataset` is the folder to contain test data, where any files can be downloaded.
 
 - `utils`
   - `proj_Gamma.m`.
   - `shortenForDGT.m`.
 
-- `phase_correction`
+- `phase_correction` is the toolbox mentioned above (see Requirements 2).
+
+- `utils` contains some useful functions
 
 
 ## License
