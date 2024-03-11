@@ -26,7 +26,7 @@ Sounds = dir(soundDir + "*" + ext);
 NN = length(Sounds);
 data = cell(NN,1);
 info = audioinfo(Sounds(1).name);
-Fs = info.SampleRate;
+fs = info.SampleRate;
 for nn = 1:NN
     data{nn} = audioread(Sounds(nn).name);
 end
@@ -80,12 +80,12 @@ for nn = 1:NN
         fprintf('\nGap Length: %d [ms]\n', gaps(m))
 
         gapLength = gaps(m); % [ms]
-        h = round(Fs*gapLength/1000); % [samples]
+        h = round(fs*gapLength/1000); % [samples]
         full.length = length(signal);
         full.mask = true(full.length, 1);
 
         notDegraded = 0.5; % [s]
-        segment.length = round((length(signal) - 2*notDegraded*Fs) / N);
+        segment.length = round((length(signal) - 2*notDegraded*fs) / N);
 
         for i = 1:length(methodLabels)
             solution.(methodLabels{i}){nn, m} = signal;
@@ -94,7 +94,7 @@ for nn = 1:NN
         for n = 1:N
             
             fprintf('\nGap Number: %d / %d\n', n, N)
-            idx = round(notDegraded*Fs) + ((n - 1)*segment.length+1:n*segment.length);
+            idx = round(notDegraded*fs) + ((n - 1)*segment.length+1:n*segment.length);
 
             % making a gap      
             s = round((winLen + 1) + rand()*(segment.length - 2*winLen - h));
