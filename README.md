@@ -1,5 +1,5 @@
 # PHAIN (PHase-aware Audio INpainter)
-**Tomoro Tanaka (Department of Intermedia Art and Science, Waseda University, Tokyo, Japan)**\
+**Tomoro Tanaka (Department of Intermedia Art and Science, Waseda University, Tokyo, Japan)**
 
 This README file describes the MATLAB codes provided to test, analyze, and evaluate our proposed method, PHAINs.\
 PHAIN is an audio declipping method introduced in the following paper
