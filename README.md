@@ -41,4 +41,4 @@ Execute `main.m` and run PHAINs (the parameters and data directory can be modifi
 
 
 ## License
-See the file named `LICENSE.pdf`.
+See the file named `LICENSE`.
