@@ -4,7 +4,7 @@
 %                                                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
-% close all
+close all
 clear
 clc
 
@@ -158,7 +158,7 @@ for nn = 1:NN
             [segment.solution, SNR_procedure{nn, m, n, 2}] = ...
                 PHAINmain(segment.gapped, segment.mask, param, paramsolver, segment.data);
 
-            solution.B_PHAIN_ora{nn, m}(idx) = segment.solution(st:ed)*segment.max;
+            solution.B_PHAIN_oracle{nn, m}(idx) = segment.solution(st:ed)*segment.max;
             TIME(nn, m, n, 2) = toc;
 
 
@@ -188,7 +188,7 @@ for nn = 1:NN
             [segment.solution, SNR_procedure{nn, m, n, 4}] = ...
                 PHAINmain(segment.gapped, segment.mask, param, paramsolver, segment.data);
 
-            solution.R_PHAIN_ora{nn, m}(idx) = segment.solution(st:ed)*segment.max;
+            solution.R_PHAIN_oracle{nn, m}(idx) = segment.solution(st:ed)*segment.max;
             TIME(nn, m, n, 4) = toc;
 
 
@@ -243,6 +243,7 @@ end
 
 snr_vec = squeeze(median(SNR, [1,3]));
 figure()
-plot(snr_vec)
+plot(snr_vec, LineWidth = 2)
+grid on
 legend(methodLabels, Interpreter = "latex")
 xlabel('gap length 5:5:100 [ms]', Interpreter = 'latex')
