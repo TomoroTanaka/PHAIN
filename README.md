@@ -33,6 +33,7 @@ Execute `main.m` and run PHAINs (the parameters and data directory can be modifi
 - `utils`
   - `proj_Gamma.m`.
   - `shortenForDGT.m`.
+  - `calcSNR.m`.
 
 - `phase_correction` is the toolbox mentioned above (see Requirements 2).
 
