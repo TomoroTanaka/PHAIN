@@ -22,6 +22,6 @@ for i = 1:paramsolver.I
     x = x + alpha*(p - x);
     u = u + alpha*(q - u);
     
-    snr_procedure(i) = snr_n(oracle(~mask), x(~mask));
+    snr_procedure(i) = calcSNR(oracle(~mask), x(~mask));
 
 end
