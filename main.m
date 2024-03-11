@@ -39,7 +39,7 @@ M = length(gaps);
 
 N = 8; % # of gaps
 
-methodLabels = {'B_PHAIN', 'B_PHAIN_ora', 'R_PHAIN', 'R_PHAIN_ora', 'UR_PHAIN', 'U_PHAIN'};
+methodLabels = {'B_PHAIN', 'B_PHAIN_oracle', 'R_PHAIN', 'R_PHAIN_oracle', 'UR_PHAIN', 'U_PHAIN'};
 
 for i = 1:length(methodLabels)
     solution.(methodLabels{i}) = cell(NN, M);  % initialization of restored results
@@ -148,9 +148,9 @@ for nn = 1:NN
             TIME(nn, m, n, 1) = toc;
 
 
-            %%%%%%%%%%%%%%%%%%%%%%% B-PHAIN (ora.) %%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%% B-PHAIN (oracle) %%%%%%%%%%%%%%%%%%%%%%
 
-            fprintf('B-PHAIN (ora.)...\n')
+            fprintf('B-PHAIN (oracle)...\n')
             tic
             param.type = 'Bora';
             paramsolver.I = 1000;
@@ -177,9 +177,9 @@ for nn = 1:NN
             TIME(nn, m, n, 3) = toc;
 
 
-            %%%%%%%%%%%%%%%%%%%%%%% R-PHAIN (ora.) %%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%% R-PHAIN (oracle) %%%%%%%%%%%%%%%%%%%%%%
 
-            fprintf('R-PHAIN (ora.)...\n')
+            fprintf('R-PHAIN (oracle)...\n')
             tic
             param.type = 'Rora';
             paramsolver.I = 100;
@@ -230,7 +230,7 @@ for nn = 1:NN
             groundtruth = signal(~full.mask);
             result = restored(~full.mask);
             for n = 1:N
-                SNR(nn, m, n, i) = snr_n(groundtruth(1 + h*(n - 1):h*n), result(1 + h*(n - 1):h*n));
+                SNR(nn, m, n, i) = calcSNR(groundtruth(1 + h*(n - 1):h*n), result(1 + h*(n - 1):h*n));
             end
         end
         fprintf('\nevaluation done!\n')
@@ -244,5 +244,5 @@ end
 snr_vec = squeeze(median(SNR, [1,3]));
 figure()
 plot(snr_vec)
-legend({'B-PHAIN', 'B-PHAIN (ora.)', 'R-PHAIN', 'R-PHAIN (ora.)', 'UR-PHAIN', 'U-PHAIN'}, Interpreter = "latex")
+legend(methodLabels, Interpreter = "latex")
 xlabel('gap length 5:5:100 [ms]', Interpreter = 'latex')
