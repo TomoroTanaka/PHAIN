@@ -59,7 +59,7 @@ hatG_adj = @(u, omega) G_adj(R_adj(D_adj(u), omega));
 %%
 
 soft = @(z, lambda) sign(z).*max(abs(z) - lambda, 0);
-param.proj = @(x) proj_Gamma(x, mask, insig.*mask);
+param.proj = @(x) projGamma(x, mask, insig.*mask);
 
 if strcmp(param.type,'B')
 

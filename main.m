@@ -16,7 +16,6 @@ addpath(genpath('dataset'))
 addpath('utils')
 addpath(genpath('phase_correction'));
 addpath('PHAIN');
-addpath('results');
 
 %% loading
 
@@ -242,8 +241,14 @@ end
 %% plot
 
 snr_vec = squeeze(median(SNR, [1,3]));
-figure()
-plot(snr_vec, LineWidth = 2)
+figure(Position = [614 157 873 830])
+p = plot(snr_vec, LineWidth = 2);
 grid on
-legend(methodLabels, Interpreter = "latex")
-xlabel('gap length 5:5:100 [ms]', Interpreter = 'latex')
+legend({"B-PHAIN", "B-PHAIN (oracle)", "R-PHAIN", "R-PHAIN (oracle)", "UR-PHAIN", "U-PHAIN"}, Interpreter = 'latex')
+xlabel('gap length 5:5:50 [ms]', Interpreter = 'latex')
+xticks = 1:10;
+xticklabels = {"5", "10", "15", "20", "25", "30", "35", "40", "45", "50"};
+ylabel('SNR at gaps [dB]', Interpreter = 'latex')
+ax = gca;
+ax.FontSize = 15;
+ax.TickLabelInterpreter = 'latex';

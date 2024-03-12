@@ -31,7 +31,7 @@ Execute `main.m` and run PHAINs (the parameters and data directory can be modifi
 - `dataset` is the folder to contain test data, where any files can be downloaded.
 
 - `utils`
-  - `proj_Gamma.m`.
+  - `projGamma.m`.
   - `shortenForDGT.m`.
   - `calcSNR.m`.
 
