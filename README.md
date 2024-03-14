@@ -1,5 +1,5 @@
 # PHAIN (PHase-aware Audio INpainter)
-**Tomoro Tanaka (Department of Intermedia Art and Science, Waseda University, Tokyo, Japan)**
+**Tomoro Tanaka (Department of Intermedia Art and Science, Waseda University, Tokyo, Japan)**\
 [![DOI](https://zenodo.org/badge/690949058.svg)](https://zenodo.org/doi/10.5281/zenodo.10818129)
 
 This README file describes the MATLAB codes provided to test, analyze, and evaluate our proposed method, PHAINs.\
