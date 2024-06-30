@@ -3,7 +3,7 @@
 [![DOI](https://zenodo.org/badge/690949058.svg)](https://zenodo.org/doi/10.5281/zenodo.10818129)
 
 This README file describes the MATLAB codes provided to test, analyze, and evaluate our proposed method, PHAINs.\
-PHAIN is an audio declipping method introduced in the following paper
+PHAIN is an audio inpainting method introduced in the following paper
 >[1] Tomoro Tanaka, Kohei Yatabe, and Yasuhiro Oikawa, "PHAIN: Audio Inpainting via Phase-aware Optimization with Instantaneous Frequency".
 
 ## Requirements
